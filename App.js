@@ -8,7 +8,11 @@ import {
   MenuOption,
   MenuTrigger,
  } from "react-native-popup-menu";
- import FlashMessage from 'react-native-flash-message';
+import FlashMessage from 'react-native-flash-message';
+
+import Parse from "parse/react-native.js";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import 'react-native-get-random-values';
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -20,7 +24,11 @@ import AddAsadera from './src/screens/addAsadera';
 import AsaderaDetails from './src/screens/asaderaDetails';
 import Delivered from './src/screens/delivered';
 
-import { getSummary, getTotalCustomers } from './src/js/caja';
+import { getRecord, getRecordPDF } from './src/js/caja';
+
+Parse.setAsyncStorage(AsyncStorage); 
+Parse.initialize('eNyF01IzgtWyiNMwkcvwFmUbBN6Cj7svvroqnfMF','mXK2aEnH5mCJuY6E8FN9nC0NW9DLvYKk1L5k1AoV');
+Parse.serverURL = 'https://parseapi.back4app.com/';
 
 const Stack = createStackNavigator();
 
@@ -28,29 +36,19 @@ function LogoTitle() {
   const currentYear = new Date().getFullYear();
   return (
     <View>
-      <Text style={styles.title}>Oven Manager App ({ currentYear })</Text>
+      <Text style={styles.title}>Horno ({ currentYear })</Text>
     </View>
   )
 }
 
 function SimpleMenu() {
-  const [totalCustomers, setTotalCustomers] = useState(0);
-  
-  const openConfirmationAlert = () => {
-    if (totalCustomers._z > 0) {
-      Alert.alert('Alerta', 'Esta función borrará los datos actuales. ¿Deseas continuar?', [
-          {text: 'Sí', onPress: () => getSummary()},
-          {text: 'No', onPress: () => {return ;}}
-      ]);
-    }
-    else {
-      Alert.alert('No hay datos que registrar por hoy.');
-    }
-  }
 
-  useEffect(() => {
-    setTotalCustomers(getTotalCustomers());
-  }, [])
+  const openConfirmationAlert = async (n) => {
+    if (n === 0)
+      await getRecord();
+    else 
+      await getRecordPDF();
+  }
 
   return (
     <MenuProvider style={styles.container}>
@@ -76,20 +74,20 @@ function SimpleMenu() {
         <MenuOptions
           customStyles={{
             optionsContainer: {
-              position: 'absolute',
-              marginTop: 16,
-              marginRight: 10,
-              left: 10,
               backgroundColor: '#ccc',
               zIndex: 10,
             },
             optionsWrapper: {
               backgroundColor: '#fff',
-              marginRight: 10,
+              position: 'absolute',
+              left: 0,
+              top: -16,
+              zIndex: 10,
             },
           }}
         >
-          <MenuOption onSelect={() => openConfirmationAlert()} text="Guardar registros" />
+          <MenuOption onSelect={async () => await openConfirmationAlert(0)} text="Guardar registros" />
+          <MenuOption onSelect={async () => await openConfirmationAlert(1)} text='Generar PDF' />
         </MenuOptions>
       </Menu>
     </MenuProvider>
@@ -106,6 +104,9 @@ function AppStack() {
         headerTintColor: '#fff',
         headerTitleStyle: {
           fontWeight: 'bold',
+        },
+        headerRightContainerStyle: {
+          backgroundColor: '#2d2d2d',
         }
       }}
       initialRouteName='items'
@@ -116,9 +117,7 @@ function AppStack() {
         options={{
           headerTitle: (props) => <LogoTitle {...props} />,
           headerRight: () => (
-            <View>
               <SimpleMenu />
-            </View>
           ),
         }}
       />
@@ -145,7 +144,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    width: 150
   },
   title: {
     color: '#fff',

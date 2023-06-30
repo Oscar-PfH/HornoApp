@@ -41,6 +41,23 @@ const Delivered = (props) => {
         }
     }
 
+    const getCustomerb4a = async (id) => {
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', id);
+
+        let result = await parseQuery.find();
+
+        setCustomer({
+            objectId: result[0].id,
+            full_name: result[0].get('full_name'),
+            price: result[0].get('price'),
+            phone: result[0].get('phone'),
+            arrival_time: result[0].get('arrival_time'),
+            state: result[0].get('state')
+        });
+        setLoading(false);
+    }
+
     const getAsaderas = async (customer_id) => {
         const qry = query(collection(db, 'asaderas'), where('customer_id', '==', customer_id));
         const docSnap = await getDocs(qry);
@@ -54,9 +71,12 @@ const Delivered = (props) => {
         setAsaderas(asaderas);
     }
 
-    const handleChangeText = (input, value) => {
-        setCustomer({...customer, [input]: value});
-        setIsDisabled(false);
+    const getAsaderasb4a = async (customer_id) => {
+        const parseQuery = new Parse.Query('asaderas');
+        parseQuery.contains('customer_id', customer_id);
+
+        let results = await parseQuery.find();
+        setAsaderas(results.map(result => result.toJSON()));
     }
 
     const handleChangeTime = (input, value) => {
@@ -74,10 +94,18 @@ const Delivered = (props) => {
     }
 
     const retrieveCustomer = async () => {
-        const dbRef = doc(db, 'clientes', customer.id);
+        /*const dbRef = doc(db, 'clientes', customer.id);
         await updateDoc(dbRef, {
             state: 0
         });
+        await switchCustomerAsaderasState(0);*/
+
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', customer.objectId);
+
+        let result = await parseQuery.find();
+        result[0].set('state', 0);
+        await result[0].save();
         await switchCustomerAsaderasState(0);
         
         showMessage({
@@ -91,12 +119,16 @@ const Delivered = (props) => {
     }
 
     const switchCustomerAsaderasState = async (state) => {
-        for (let i = 0; i < asaderas.length; i++) {
+        /*for (let i = 0; i < asaderas.length; i++) {
             const dbRef = doc(db, 'asaderas', asaderas[i].id);
             await updateDoc(dbRef, {
                 state: state
             });
-        }
+        }*/
+        asaderas.forEach(async (asadera) => {
+            asadera.set('state', state);
+            await asadera.save();
+        });
     }
 
     const deleteCustomer = async () => {
@@ -119,8 +151,8 @@ const Delivered = (props) => {
     }
 
     useEffect(() => {
-        getCustomer(props.route.params.customer_id);
-        getAsaderas(props.route.params.customer_id);
+        getCustomerb4a(props.route.params.customer_id);
+        getAsaderasb4a(props.route.params.customer_id);
     }, [])
 
     if (loading === true) {

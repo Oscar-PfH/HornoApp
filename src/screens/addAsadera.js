@@ -4,10 +4,12 @@ import { Icon } from 'react-native-elements';
 import SelectDropdown from 'react-native-select-dropdown';
 import { showMessage } from 'react-native-flash-message';
 
+import Parse from "parse/react-native.js";
+
 import { collection, addDoc, getDoc, doc } from "firebase/firestore"; 
 import db from '../../database/firebase';
 
-import { getHoursList, getMinutesList, getHourIndex } from '../js/time';
+import { getHoursList, getMinutesList, getHourIndex, getTime } from '../js/time';
 
 import { formStyles } from '../styles/forms';
 
@@ -26,7 +28,7 @@ const AddAsadera = ({route, navigation}) => {
     };
     const [asadera, setAsadera] = useState(initialState);
     const [customer, setCustomer] = useState({
-        id: '',
+        objectId: '',
         full_name: '',
     });
 
@@ -49,63 +51,30 @@ const AddAsadera = ({route, navigation}) => {
             throw error;
         }
     }
-/*
-    const getCustomerIndex = (customers_id, customer_id) => {
-        for (let i = 0; i < customers_id.length; i++) {
-            if (customers_id[i] === customer_id) return i;
-        }
-        return 0;
+
+    const getCustomerb4a = async (id) => {
+        const query = new Parse.Query('clientes');
+        query.contains('objectId', id);
+        
+        let result = await query.find();
+
+        setCustomer({
+            objectId: result[0].get('objectId'),
+            full_name: result[0].get('full_name')
+        });
     }
 
-    const getCustomers = async () => {
-        const docRef = collection(db, 'clientes');
-        const docSnap = await getDocs(docRef);
-        let customers = [];
-        let customersId = [];
-        docSnap.forEach((doc) => {
-            const customer = doc.data();
-            customers.push(customer.full_name.toUpperCase());
-            customersId.push(doc.id);
-        });
-        setCustomers(customers);
-        setCustomersId(customersId);
-        setCustomerIndex(getCustomerIndex(customersId, route.params.customer_id));
-    }
-*/
     const handleChangeText = (input, value) => {
         setAsadera({...asadera, [input]: value})
     }
 
     const handleChangeTime = (input, value) => {
         let time = asadera.entry_time.split(':');
-        let new_time = '';
-        if (input === 'hour') {
-            new_time += value + ':' + time[1];
-        }
-        else if (input === 'minute') {
-            new_time += time[0] + ':' + value;
-        }
-        else if (input === 'ampm') {
-            if (value === 'PM' && parseInt(time[0]) < 12) {
-                new_time += (parseInt(time[0]) + 12).toString() + ':' + time[1];
-            }
-            else if (value === 'AM' && parseInt(time[0]) === 12) {
-                new_time += '00' + ':' + time[1];
-            }
-            else if (value === 'AM' && parseInt(time[0]) > 12) {
-                new_time += (parseInt(time[0]) - 12).toString() + ':' + time[1];
-            }
-            else {
-                new_time += time[0] + ':' + time[1];
-            }
-        }
-        else {
-            new_time += time[0] + ':' + time[1];
-        }
+        let new_time = getTime(time, input, value);
         setAsadera({...asadera, ['entry_time']: new_time});
     }
 
-    const addAsadera = async (customer_name = '[cliente]') => {
+    const addAsadera = async () => {
         if (asadera.content === '') {
             showMessage({
                 message: 'Por favor, ingrese el contenido de la asadera',
@@ -116,7 +85,7 @@ const AddAsadera = ({route, navigation}) => {
         }
         else if (asadera.customer_id === '') {
             showMessage({
-                message: 'Por favor, ingrese el contenido de la asadera',
+                message: 'Por favor, asigne a un cliente',
                 type: 'warning',
                 icon: 'warning',
                 position: 'bottom'
@@ -124,7 +93,7 @@ const AddAsadera = ({route, navigation}) => {
         }
         else if (asadera.oven === '') {
             showMessage({
-                message: 'Por favor, ingrese el contenido de la asadera',
+                message: 'Por favor, seleccione un horno',
                 type: 'warning',
                 icon: 'warning',
                 position: 'bottom'
@@ -132,7 +101,17 @@ const AddAsadera = ({route, navigation}) => {
         }
         else {
             try {
-                const docRef = await addDoc(collection(db, 'asaderas'), asadera);
+                //const docRef = await addDoc(collection(db, 'asaderas'), asadera);
+                let newAsadera = new Parse.Object('asaderas');
+                console.log(asadera);
+                newAsadera.set('content', asadera.content);
+                newAsadera.set('description', asadera.description);
+                newAsadera.set('customer_id', asadera.customer_id);
+                newAsadera.set('oven', asadera.oven);
+                newAsadera.set('entry_time', asadera.entry_time);
+                newAsadera.set('state', asadera.state);
+                let result = await newAsadera.save();
+                console.log(result);
                 showMessage({
                     message: 'Asadera agregada exitosamente!',
                     type: 'success',
@@ -214,7 +193,8 @@ const AddAsadera = ({route, navigation}) => {
     );
 
     useEffect(() => {
-        getCustomer(route.params.customer_id);
+        //getCustomer(route.params.customer_id);
+        getCustomerb4a(route.params.customer_id);
     }, []);
 
     return (
@@ -288,7 +268,7 @@ const AddAsadera = ({route, navigation}) => {
             <CurrentTime />
 
             <View style={formStyles.button}>
-                <Button title='Guardar' onPress={() => addAsadera(customer.full_name)} />
+                <Button title='Guardar' onPress={() => addAsadera()} />
             </View>
         </ScrollView>
     );

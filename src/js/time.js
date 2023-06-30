@@ -41,3 +41,31 @@ export const getTimeText = (time) => {
     }
     return timeText;
 }
+
+export const getTime = (time, input, value) => {
+    let new_time = '';
+    if (input === 'hour') {
+        new_time += value + ':' + time[1];
+    }
+    else if (input === 'minute') {
+        new_time += time[0] + ':' + value;
+    }
+    else if (input === 'ampm') {
+        if (value === 'PM' && parseInt(time[0]) < 12) {
+            new_time += (parseInt(time[0]) + 12).toString() + ':' + time[1];
+        }
+        else if (value === 'AM' && parseInt(time[0]) === 12) {
+            new_time += '00' + ':' + time[1];
+        }
+        else if (value === 'AM' && parseInt(time[0]) > 12) {
+            new_time += (parseInt(time[0]) - 12).toString() + ':' + time[1];
+        }
+        else {
+            new_time += time[0] + ':' + time[1];
+        }
+    }
+    else {
+        new_time += time[0] + ':' + time[1];
+    }
+    return new_time;
+}

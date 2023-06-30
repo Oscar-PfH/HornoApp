@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { ListItem, Icon } from 'react-native-elements';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { collection, getDocs, query, where } from "firebase/firestore";
+import Parse from "parse/react-native.js";
+
+import { collection, doc, getDocs, query, where } from "firebase/firestore";
 import db from "../../database/firebase";
 
 import Empty from './empty';
@@ -24,24 +26,42 @@ const Customers = (props) => {
       }, 2000);
     }, []);
 
-    const getCustomers = async () => {
-      const qry = query(collection(db, 'clientes'), where('state', '==', props.state));
-      const docSnap = await getDocs(qry);
-      let customers = [];
-      docSnap.forEach(async (doc) => {
-        const {full_name, price, phone, arrival_time, state} = doc.data();
-        customers.push({
-            id: doc.id, full_name, price, phone, arrival_time, state
+    const getCustomersByState = async () => {
+      try {
+        const qry = query(collection(db, 'clientes'), where('state', '==', props.state));
+        const docSnap = await getDocs(qry);
+        let customersList = [];
+
+        docSnap.forEach((doc) => {
+          const {full_name, price, phone, arrival_time, state} = doc.data();
+          customersList.push({
+              id: doc.id, full_name, price, phone, arrival_time, state
+          });
         });
-      });
-      setCustomers(customers);
+        //Alert.alert('Success query: ' + docSnap.size + ' customers here');
+        setCustomers(customersList);
+        setIsLoading(false);
+      }
+      catch (error) {
+        console.error(error);
+      }
+    }
+
+    const getCustomersB4A = async () => {
+      const query = new Parse.Query('clientes');
+      query.equalTo('state', props.state);
+
+      const results = await query.find();
+      setCustomers(results.map(result => result.toJSON()));
       setIsLoading(false);
     }
     
     useEffect(() => {
-        getCustomers();
+        getCustomersB4A();
+        //getCustomersByState();
         const focusHandler = props.navigation.addListener('focus', async () => {
-            await getCustomers();
+            //await getCustomersByState();
+            await getCustomersB4A();
         });
         return focusHandler;
     }, [props.navigation]);
@@ -60,7 +80,7 @@ const Customers = (props) => {
         customers.length > 0 ? 
           customers.map(customer => (
             <ListItem 
-              key={customer.id}
+              key={customer.objectId}
               bottomDivider
               linearGradientProps={{
                 colors: ['#2d2d2d', '#0f0f0f'],
@@ -68,7 +88,7 @@ const Customers = (props) => {
                 end: [0.2, 0],
               }}
               ViewComponent={ LinearGradient }
-              onPress={() => props.navigation.navigate(customer.state === 0 ? 'customerDetails' : 'delivered', {customer_id: customer.id})}
+              onPress={() => props.navigation.navigate(customer.state === 0 ? 'customerDetails' : 'delivered', {customer_id: customer.objectId})}
               >
               <ListItem.Content>
                 <ListItem.Title style={{color: '#fff'}}>{customer.full_name.toUpperCase() + ' (' + getTimeText(customer.arrival_time) + ')'} </ListItem.Title>

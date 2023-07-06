@@ -21,7 +21,7 @@ export default {
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.ovenManage.ovenManage",
@@ -29,13 +29,16 @@ export default {
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
+    "extra": {/*
       "apiKey": process.env.API_KEY,
       "authDomain": process.env.AUTH_DOMAIN,
       "projectId": process.env.PROJECT_ID,
       "storageBucket": process.env.STORAGE_BUCKET,
       "messagingSenderId": process.env.MESSAGING_SENDER_ID,
+      "appId": process.env.APP_ID,*/
       "appId": process.env.APP_ID,
+      "jsKey": process.env.JS_KEY,
+      "serverUrl": process.env.SERVER_URL,
       "eas": {
         "projectId": process.env.EAS_ID
       }

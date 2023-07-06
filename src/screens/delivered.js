@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Text, ScrollView, Button, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Button, Alert, ActivityIndicator } from 'react-native';
 import { ListItem, Icon } from 'react-native-elements';
 import SelectDropdown from 'react-native-select-dropdown';
 import { showMessage } from 'react-native-flash-message';
 
-import db from '../../database/firebase';
-import { collection, doc, getDoc, updateDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import Parse from "parse/react-native.js";
 
 import { getHoursList, getMinutesList, getHourIndex, getTimeText } from '../js/time';
 
@@ -25,38 +24,29 @@ const Delivered = (props) => {
     const [asaderas, setAsaderas] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const getCustomer = async (id) => {
-        try {
-            const docRef = doc(db, 'clientes', id)
-            const docSnap = await getDoc(docRef);
-            if(docSnap.exists()) {
-                const {full_name, price, phone, arrival_time, state} = docSnap.data();
-                setCustomer({id: docSnap.id, full_name, price, phone, arrival_time, state});
-                setLoading(false);
-            } else {
-                Alert.alert('No existen datos');
-            }
-        } catch(error) {
-            throw error;
-        }
-    }
+    const getCustomerb4a = async (id) => {
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', id);
 
-    const getAsaderas = async (customer_id) => {
-        const qry = query(collection(db, 'asaderas'), where('customer_id', '==', customer_id));
-        const docSnap = await getDocs(qry);
-        let asaderas = [];
-        docSnap.forEach(doc => {
-            const {customer_id, content, description, oven, entry_time, state} = doc.data();
-            asaderas.push({
-                id: doc.id, customer_id, content, description, oven, entry_time, state
-            });
+        let result = await parseQuery.find();
+
+        setCustomer({
+            objectId: result[0].id,
+            full_name: result[0].get('full_name'),
+            price: result[0].get('price'),
+            phone: result[0].get('phone'),
+            arrival_time: result[0].get('arrival_time'),
+            state: result[0].get('state')
         });
-        setAsaderas(asaderas);
+        setLoading(false);
     }
 
-    const handleChangeText = (input, value) => {
-        setCustomer({...customer, [input]: value});
-        setIsDisabled(false);
+    const getAsaderasb4a = async (customer_id) => {
+        const parseQuery = new Parse.Query('asaderas');
+        parseQuery.contains('customer_id', customer_id);
+
+        let results = await parseQuery.find();
+        setAsaderas(results.map(result => result.toJSON()));
     }
 
     const handleChangeTime = (input, value) => {
@@ -74,10 +64,12 @@ const Delivered = (props) => {
     }
 
     const retrieveCustomer = async () => {
-        const dbRef = doc(db, 'clientes', customer.id);
-        await updateDoc(dbRef, {
-            state: 0
-        });
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', customer.objectId);
+
+        let result = await parseQuery.find();
+        result[0].set('state', 0);
+        await result[0].save();
         await switchCustomerAsaderasState(0);
         
         showMessage({
@@ -91,24 +83,40 @@ const Delivered = (props) => {
     }
 
     const switchCustomerAsaderasState = async (state) => {
-        for (let i = 0; i < asaderas.length; i++) {
-            const dbRef = doc(db, 'asaderas', asaderas[i].id);
-            await updateDoc(dbRef, {
-                state: state
-            });
-        }
+        const query = new Parse.Query('asaderas');
+        query.contains('customer_id', customer.objectId);
+        
+        let results = await query.find();
+        results.forEach(async (result) => {
+            result.set('state', state);
+            await result.save();
+        });
     }
 
     const deleteCustomer = async () => {
         await deleteAsaderas();
-        await deleteDoc(doc(db, 'clientes', customer.id));
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', customer.objectId);
+
+        let result = await parseQuery.find();
+        await result[0].destroy();
+        showMessage({
+            message: 'Cliente eliminado de la BD',
+            type: 'success',
+            icon: 'auto',
+            position: 'bottom'
+        })
         props.navigation.navigate('items');
     }
 
     const deleteAsaderas = async () => {
-        for (let i = 0; i < asaderas.length; i++) {
-            await deleteDoc(doc(db, 'asaderas', asaderas[i].id));
-        }
+        const query = new Parse.Query('asaderas');
+        query.contains('customer_id', customer.objectId);
+        
+        let results = await query.find();
+        results.forEach(async (result) => {
+            await result.destroy();
+        });
     }
 
     const openConfirmationAlert = () => {
@@ -119,8 +127,8 @@ const Delivered = (props) => {
     }
 
     useEffect(() => {
-        getCustomer(props.route.params.customer_id);
-        getAsaderas(props.route.params.customer_id);
+        getCustomerb4a(props.route.params.customer_id);
+        getAsaderasb4a(props.route.params.customer_id);
     }, [])
 
     if (loading === true) {

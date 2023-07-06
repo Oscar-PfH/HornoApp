@@ -25,19 +25,47 @@ export const getHourIndex = (hour) => {
 export const getTimeText = (time) => {
     let timeText = '';
     let hours = parseInt(time.split(':')[0]);
-    let minutes = time.split(':')[1];
+    let minutes = parseInt(time.split(':')[1]);
     if (hours > 12) {
         hours -= 12;
-        timeText += hours.toString() + ':' + minutes + ' pm';
+        timeText += hours.toString() + ':' + (minutes < 10 ? '0' + minutes : minutes) + ' pm';
     }
     else if (hours === 12) {
-        timeText += '12:' + minutes + ' pm';
+        timeText += '12:' + (minutes < 10 ? '0' + minutes : minutes) + ' pm';
     }
     else if (hours === 0) {
-        timeText += '12:' + minutes + ' am';
+        timeText += '12:' + (minutes < 10 ? '0' + minutes : minutes) + ' am';
     }
     else {
         timeText += hours.toString() + ':' + (minutes < 10 ? '0' + minutes : minutes) + ' am';
     }
     return timeText;
+}
+
+export const getTime = (time, input, value) => {
+    let new_time = '';
+    if (input === 'hour') {
+        new_time += value + ':' + time[1];
+    }
+    else if (input === 'minute') {
+        new_time += time[0] + ':' + value;
+    }
+    else if (input === 'ampm') {
+        if (value === 'PM' && parseInt(time[0]) < 12) {
+            new_time += (parseInt(time[0]) + 12).toString() + ':' + time[1];
+        }
+        else if (value === 'AM' && parseInt(time[0]) === 12) {
+            new_time += '00' + ':' + time[1];
+        }
+        else if (value === 'AM' && parseInt(time[0]) > 12) {
+            new_time += (parseInt(time[0]) - 12).toString() + ':' + time[1];
+        }
+        else {
+            new_time += time[0] + ':' + time[1];
+        }
+    }
+    else {
+        new_time += time[0] + ':' + time[1];
+    }
+    return new_time;
 }

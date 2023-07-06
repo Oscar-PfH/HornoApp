@@ -4,18 +4,17 @@ import { ListItem, Icon } from 'react-native-elements';
 import SelectDropdown from 'react-native-select-dropdown';
 import { showMessage } from 'react-native-flash-message';
 
-import db from '../../database/firebase';
-import { collection, doc, getDoc, updateDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import Parse from "parse/react-native.js";
 
-import { getHoursList, getMinutesList, getHourIndex, getTimeText } from '../js/time';
+import { getHoursList, getMinutesList, getHourIndex, getTimeText, getTime } from '../js/time';
 
 import { formStyles } from '../styles/forms';
 
-const ItemDetails = (props) => {
+const CustomerDetails = (props) => {
     const currentTime = new Date();
     const [isDisabled, setIsDisabled] = useState(true);
     const initialState = {
-        id: '',
+        objectId: '',
         full_name: '',
         price: .0,
         phone: 0,
@@ -26,33 +25,28 @@ const ItemDetails = (props) => {
     const [asaderas, setAsaderas] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const getCustomer = async (id) => {
-        try {
-            const docRef = doc(db, 'clientes', id)
-            const docSnap = await getDoc(docRef);
-            if(docSnap.exists()) {
-                const {full_name, price, phone, arrival_time, state} = docSnap.data();
-                setCustomer({id: docSnap.id, full_name, price, phone, arrival_time, state});
-                setLoading(false);
-            } else {
-                Alert.alert('No existen datos');
-            }
-        } catch(error) {
-            throw error;
-        }
+    const getCustomerb4a = async (id) => {
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', id);
+
+        let result = await parseQuery.find();
+        let c = {...customer};
+        c.objectId = result[0].id;
+        c.full_name = result[0].get('full_name');
+        c.price = result[0].get('price');
+        c.phone = result[0].get('phone');
+        c.arrival_time = result[0].get('arrival_time');
+        c.state = result[0].get('state');
+        setCustomer(c);
+        setLoading(false);
     }
 
-    const getAsaderas = async (customer_id) => {
-        const qry = query(collection(db, 'asaderas'), where('customer_id', '==', customer_id));
-        const docSnap = await getDocs(qry);
-        let asaderas = [];
-        docSnap.forEach(doc => {
-            const {customer_id, content, description, oven, entry_time, state} = doc.data();
-            asaderas.push({
-                id: doc.id, customer_id, content, description, oven, entry_time, state
-            });
-        });
-        setAsaderas(asaderas);
+    const getAsaderasb4a = async (customer_id) => {
+        const parseQuery = new Parse.Query('asaderas');
+        parseQuery.contains('customer_id', customer_id);
+
+        let results = await parseQuery.find();
+        setAsaderas(results.map(result => result.toJSON()));
     }
 
     const handleChangeText = (input, value) => {
@@ -62,40 +56,21 @@ const ItemDetails = (props) => {
 
     const handleChangeTime = (input, value) => {
         let time = customer.arrival_time.split(':');
-        if (input === 'hour') {
-            customer.arrival_time = value + ':' + time[1];
-        }
-        else if (input === 'minute') {
-            customer.arrival_time = time[0] + ':' + value;
-        }
-        else if (input === 'ampm') {
-            if (value === 'PM' && parseInt(time[0]) < 12) {
-                customer.arrival_time = (parseInt(time[0]) + 12).toString() + ':' + time[1];
-            }
-            else if (value === 'AM' && parseInt(time[0]) === 12) {
-                customer.arrival_time = '00' + ':' + time[1];
-            }
-            else if (value === 'AM' && parseInt(time[0]) > 12) {
-                customer.arrival_time = (parseInt(time[0]) - 12).toString() + ':' + time[1];
-            }
-            else {
-                customer.arrival_time = time[0] + ':' + time[1];
-            }
-        }
-        else {
-            customer.arrival_time = time[0] + ':' + time[1];
-        }
+        let new_time = getTime(time, input, value);
+        setCustomer({...customer, ['arrival_time']: new_time});
         setIsDisabled(false);
     }
 
-    const updateCustomer = async () => {
-        const dbRef = doc(db, 'clientes', customer.id);
-        await updateDoc(dbRef, {
-            full_name: customer.full_name,
-            price: customer.price,
-            phone: customer.phone,
-            arrival_time: customer.arrival_time
-        });
+    const updateCustomerb4a = async () => {
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', customer.objectId);
+
+        let result = await parseQuery.find();
+        result[0].set('full_name', customer.full_name);
+        result[0].set('price', customer.price);
+        result[0].set('phone', customer.phone);
+        result[0].set('arrival_time', customer.arrival_time);
+        await result[0].save();
         showMessage({
             message: 'Cambios guardados',
             type: 'success',
@@ -107,10 +82,12 @@ const ItemDetails = (props) => {
     }
 
     const deliverToCustomer = async () => {
-        const dbRef = doc(db, 'clientes', customer.id);
-        await updateDoc(dbRef, {
-            state: 1
-        });
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', customer.objectId);
+
+        let result = await parseQuery.find();
+        result[0].set('state', 1);
+        await result[0].save();
         await switchCustomerAsaderasState(2);
         showMessage({
             message: 'Entregado!!!',
@@ -123,17 +100,23 @@ const ItemDetails = (props) => {
     }
 
     const switchCustomerAsaderasState = async (state) => {
-        for (let i = 0; i < asaderas.length; i++) {
-            const dbRef = doc(db, 'asaderas', asaderas[i].id);
-            await updateDoc(dbRef, {
-                state: state
-            });
-        }
+        const query = new Parse.Query('asaderas');
+        query.contains('customer_id', customer.objectId);
+        
+        let results = await query.find();
+        results.forEach(async (result) => {
+            result.set('state', state);
+            await result.save();
+        });
     }
 
     const deleteCustomer = async () => {
         await deleteAsaderas();
-        await deleteDoc(doc(db, 'clientes', customer.id));
+        const parseQuery = new Parse.Query('clientes');
+        parseQuery.contains('objectId', customer.objectId);
+
+        let result = await parseQuery.find();
+        await result[0].destroy();
         showMessage({
             message: 'Cliente eliminado de la BD',
             type: 'success',
@@ -144,9 +127,13 @@ const ItemDetails = (props) => {
     }
 
     const deleteAsaderas = async () => {
-        for (let i = 0; i < asaderas.length; i++) {
-            await deleteDoc(doc(db, 'asaderas', asaderas[i].id));
-        }
+        const query = new Parse.Query('asaderas');
+        query.contains('customer_id', customer.objectId);
+        
+        let results = await query.find();
+        results.forEach(async (result) => {
+            await result.destroy();
+        });
     }
 
     const openConfirmationAlert = () => {
@@ -157,11 +144,11 @@ const ItemDetails = (props) => {
     }
 
     useEffect(() => {
-        getCustomer(props.route.params.customer_id);
-        getAsaderas(props.route.params.customer_id);
+        getCustomerb4a(props.route.params.customer_id);
+        getAsaderasb4a(props.route.params.customer_id);
         const focusHandler = props.navigation.addListener('focus', async () => {
-            await getCustomer(props.route.params.customer_id);
-            await getAsaderas(props.route.params.customer_id);
+            await getCustomerb4a(props.route.params.customer_id);
+            await getAsaderasb4a(props.route.params.customer_id);
           });
         return focusHandler;
     }, [])
@@ -264,7 +251,7 @@ const ItemDetails = (props) => {
             </View>
 
             <View style={formStyles.button}>
-                <Button title='Actualizar' disabled={isDisabled} onPress={() => updateCustomer()} />
+                <Button title='Actualizar' disabled={isDisabled} onPress={() => updateCustomerb4a()} />
             </View>
             <View style={formStyles.button}>
                 <Button title='Entregar' onPress={() => deliverToCustomer()} />
@@ -278,8 +265,8 @@ const ItemDetails = (props) => {
             {
                 asaderas.map(asadera => (
                     <ListItem
-                        key={asadera.id}
-                        onPress={() => props.navigation.navigate('asaderaDetails', {asadera_id: asadera.id, full_name: customer.full_name})}
+                        key={asadera.objectId}
+                        onPress={() => props.navigation.navigate('asaderaDetails', {asadera_id: asadera.objectId, full_name: customer.full_name})}
                     >
                         <ListItem.Content>
                             <ListItem.Title>
@@ -306,4 +293,4 @@ const ItemDetails = (props) => {
     );
 }
 
-export default ItemDetails;
+export default CustomerDetails;

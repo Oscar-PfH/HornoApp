@@ -4,10 +4,9 @@ import { Icon } from 'react-native-elements';
 import SelectDropdown from 'react-native-select-dropdown';
 import { showMessage } from 'react-native-flash-message';
 
-import { collection, doc, getDoc, updateDoc } from "firebase/firestore"; 
-import db from '../../database/firebase';
+import Parse from "parse/react-native.js";
 
-import { getHoursList, getMinutesList, getHourIndex } from '../js/time';
+import { getHoursList, getMinutesList, getHourIndex, getTime } from '../js/time';
 
 import { formStyles } from '../styles/forms';
 
@@ -19,6 +18,7 @@ const AsaderaDetails = ({route, navigation}) => {
     const [isDisabled, setIsDisabled] = useState(true);
 
     const initialState = {
+        objectId: '',
         customer_id: '',
         content: '',
         description: '',
@@ -28,20 +28,22 @@ const AsaderaDetails = ({route, navigation}) => {
     };
     const [asadera, setAsadera] = useState(initialState);
 
-    const getAsadera = async (id) => {
-        try {
-            const docRef = doc(db, 'asaderas', id)
-            const docSnap = await getDoc(docRef);
-            if(docSnap.exists()) {
-                const {customer_id, content, description, entry_time, oven, state} = docSnap.data();
-                setAsadera({id: docSnap.id, customer_id, content, description, entry_time, oven, state});
-                setLoading(false);
-            } else {
-                Alert.alert('No existen datos de la asadera');
-            }
-        } catch(error) {
-            throw error;
-        }
+    const getAsaderab4a = async (id) => {
+        const query = new Parse.Query('asaderas');
+        query.contains('objectId', id);
+
+        const result = await query.find();
+
+        setAsadera({
+            objectId: result[0].id,
+            customer_id: result[0].get('customer_id'),
+            content: result[0].get('content'),
+            description: result[0].get('description'),
+            oven: result[0].get('oven'),
+            entry_time: result[0].get('entry_time'),
+            state: result[0].get('state')
+        })
+        setLoading(false);
     }
 
     const updateAsadera = async () => {
@@ -50,8 +52,17 @@ const AsaderaDetails = ({route, navigation}) => {
         }
         else {
             try {
-                const dbRef = doc(db, 'asaderas', asadera.id);
-                await updateDoc(dbRef, asadera)
+                const parseQuery = new Parse.Query('asaderas');
+                parseQuery.contains('objectId', asadera.objectId);
+
+                let result = await parseQuery.find();
+                result[0].set('content', asadera.content);
+                result[0].set('description', asadera.description);
+                result[0].set('customer_id', asadera.customer_id);
+                result[0].set('oven', asadera.oven);
+                result[0].set('entry_time', asadera.entry_time);
+                result[0].set('state', asadera.state);
+                await result[0].save();
                 showMessage({
                     message: `Se guardaron los cambios`,
                     type: 'success',
@@ -66,6 +77,21 @@ const AsaderaDetails = ({route, navigation}) => {
             }
         }
     }
+
+    const deleteAsadera = async () => {
+        const parseQuery = new Parse.Query('asaderas');
+        parseQuery.contains('objectId', asadera.objectId);
+
+        let result = await parseQuery.find();
+        await result[0].destroy();
+        showMessage({
+            message: 'Asadera eliminada de la BD',
+            type: 'success',
+            icon: 'auto',
+            position: 'bottom'
+        })
+        props.navigation.navigate('customerDetails', {customer_id: asadera.customer_id});
+    }
     
     const handleChangeText = (input, value) => {
         setAsadera({...asadera, [input]: value});
@@ -74,38 +100,15 @@ const AsaderaDetails = ({route, navigation}) => {
 
     const handleChangeTime = (input, value) => {
         let time = asadera.entry_time.split(':');
-        let new_time = '';
-        if (input === 'hour') {
-            new_time += value + ':' + time[1];
-        }
-        else if (input === 'minute') {
-            new_time += time[0] + ':' + value;
-        }
-        else if (input === 'ampm') {
-            if (value === 'PM' && parseInt(time[0]) < 12) {
-                new_time += (parseInt(time[0]) + 12).toString() + ':' + time[1];
-            }
-            else if (value === 'AM' && parseInt(time[0]) === 12) {
-                new_time += '00' + ':' + time[1];
-            }
-            else if (value === 'AM' && parseInt(time[0]) > 12) {
-                new_time += (parseInt(time[0]) - 12).toString() + ':' + time[1];
-            }
-            else {
-                new_time += time[0] + ':' + time[1];
-            }
-        }
-        else {
-            new_time += time[0] + ':' + time[1];
-        }
+        let new_time = getTime(time, input, value);
         setAsadera({...asadera, ['entry_time']: new_time});
         setIsDisabled(false);
     }
 
     const openConfirmationAlert = () => {
         Alert.alert('¿Seguro que quieres eliminar esta asadera?', [
-            {text: 'Sí', onPress: () => deleteItem()},
-            {text: 'No', onPress: () => console.log('cancelado')}
+            {text: 'Sí', onPress: () => deleteAsadera()},
+            {text: 'No', onPress: () => {return;}}
         ]);
     }
 
@@ -175,7 +178,7 @@ const AsaderaDetails = ({route, navigation}) => {
     );
 
     useEffect(() => {
-        getAsadera(route.params.asadera_id);
+        getAsaderab4a(route.params.asadera_id);
     }, []);
 
     if (loading === true) {

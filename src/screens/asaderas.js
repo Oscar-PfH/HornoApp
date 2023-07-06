@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
-import { ListItem, Avatar, Button, Icon } from 'react-native-elements';
+import { ListItem, Icon } from 'react-native-elements';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { collection, doc, getDocs, query, where } from "firebase/firestore";
-import db from "../../database/firebase";
+import Parse from "parse/react-native.js";
 
 import Empty from './empty';
 
@@ -26,45 +25,47 @@ const Asaderas = (props) => {
     }, 2000);
   }, []);
 
-  const getCustomers = async () => {
-    const qry = query(collection(db, 'clientes'), where('state', '==', 0));
-    const docSnap = await getDocs(qry);
-    const customers = [];
-    docSnap.forEach(async (doc) => {
-      const {full_name, price, phone, arrival_time, state} = doc.data();
-      customers.push({
-          id: doc.id, full_name, price, phone, arrival_time, state
-      });
-    });
-    setCustomers(customers);
+  const getCustomersByStateb4a = async (state = 0) => {
+    const query = new Parse.Query('clientes');
+    query.equalTo('state', state)
+    
+    const results = await query.find();
+    setCustomers(results.map(result => result.toJSON()));
   }
 
-  const getAsaderas = async (oven = 1) => {
-    const qry = query(collection(db, 'asaderas'), where('oven', '==', oven));
-    const docSnap = await getDocs(qry);
-    let asaderas = [];
-    docSnap.forEach(doc => {
-      const {customer_id, content, description, entry_time, state} = doc.data();
-      asaderas.push({id: doc.id, customer_id, content, description, entry_time, state});
-    });
-    setAsaderas(asaderas);
+  const getAsaderasb4a = async (oven = 0) => {
+    const query = new Parse.Query('asaderas');
+    query.equalTo('oven', oven);
+
+    const results = await query.find();
+    setAsaderas(results.map(result => result.toJSON()));
     setIsLoading(false);
   }
 
   const getCustomerFullName = (customer_id) => {
     for (let i = 0; i < customers.length; i++) {
-      if (customers[i].id === customer_id) 
+      if (customers[i].objectId === customer_id) 
         return customers[i].full_name.toUpperCase();
     }
     return '';
   }
 
+  const checkCustomers = () => {
+    for (let i = 0; i < customers.length; i++) {
+      for (let j = 0; j < asaderas.length; j++) {
+        if (customers[i].objectId === asaderas[j].customer_id)
+          return true;
+      }
+    }
+    return false;
+  }
+
   useEffect(() => {
-    getCustomers();
-    getAsaderas(props.oven);
+    getCustomersByStateb4a(0);
+    getAsaderasb4a(props.oven);
     const focusHandler = props.navigation.addListener('focus', async () => {
-      await getCustomers();
-      await getAsaderas(props.oven);
+      await getCustomersByStateb4a(0);
+      await getAsaderasb4a(props.oven);
     });
     return focusHandler;
   }, []);
@@ -72,7 +73,7 @@ const Asaderas = (props) => {
   if (isLoading) {
     return <ActivityIndicator size='large' />
   }
-  if (customers.length === 0 || asaderas.length === 0) {
+  if (customers.length === 0 || asaderas.length === 0 || checkCustomers() === false) {
     return <Empty />
   }
   else 
@@ -86,7 +87,7 @@ const Asaderas = (props) => {
           if (customer_full_name != '') {
             return (
               <ListItem 
-                key={asadera.id}
+                key={asadera.objectId}
                 bottomDivider
                 linearGradientProps={{
                   colors: ['#2d2d2d', '#0f0f0f'],

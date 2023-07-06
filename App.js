@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Button, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Icon } from 'react-native-elements';
 import {
   Menu,
@@ -8,9 +8,14 @@ import {
   MenuOption,
   MenuTrigger,
  } from "react-native-popup-menu";
- import FlashMessage from 'react-native-flash-message';
+import FlashMessage from 'react-native-flash-message';
 
-import { NavigationContainer } from '@react-navigation/native';
+import Parse from "parse/react-native.js";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import 'react-native-get-random-values';
+import Constants from 'expo-constants';
+
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import AddCustomer from './src/screens/addCustomer';
@@ -19,8 +24,13 @@ import CustomerDetails from './src/screens/customerDetails';
 import AddAsadera from './src/screens/addAsadera';
 import AsaderaDetails from './src/screens/asaderaDetails';
 import Delivered from './src/screens/delivered';
+import Records from './src/screens/records';
 
-import { getSummary, getTotalCustomers } from './src/js/caja';
+import { getRecord, getRecordPDF } from './src/js/caja';
+
+Parse.setAsyncStorage(AsyncStorage);
+Parse.initialize(Constants.manifest.extra.appId, Constants.manifest.extra.jsKey);
+Parse.serverURL = Constants.manifest.extra.serverUrl;
 
 const Stack = createStackNavigator();
 
@@ -28,29 +38,20 @@ function LogoTitle() {
   const currentYear = new Date().getFullYear();
   return (
     <View>
-      <Text style={styles.title}>Oven Manager App ({ currentYear })</Text>
+      <Text style={styles.title}>Horno ({ currentYear })</Text>
     </View>
   )
 }
 
 function SimpleMenu() {
-  const [totalCustomers, setTotalCustomers] = useState(0);
-  
-  const openConfirmationAlert = () => {
-    if (totalCustomers._z > 0) {
-      Alert.alert('Alerta', 'Esta función borrará los datos actuales. ¿Deseas continuar?', [
-          {text: 'Sí', onPress: () => getSummary()},
-          {text: 'No', onPress: () => {return ;}}
-      ]);
-    }
-    else {
-      Alert.alert('No hay datos que registrar por hoy.');
-    }
-  }
+  const navigation = useNavigation();
 
-  useEffect(() => {
-    setTotalCustomers(getTotalCustomers());
-  }, [])
+  const openConfirmationAlert = async (n) => {
+    if (n === 0)
+      await getRecord();
+    else 
+      await getRecordPDF();
+  }
 
   return (
     <MenuProvider style={styles.container}>
@@ -76,20 +77,21 @@ function SimpleMenu() {
         <MenuOptions
           customStyles={{
             optionsContainer: {
-              position: 'absolute',
-              marginTop: 16,
-              marginRight: 10,
-              left: 10,
               backgroundColor: '#ccc',
               zIndex: 10,
             },
             optionsWrapper: {
               backgroundColor: '#fff',
-              marginRight: 10,
+              position: 'absolute',
+              left: 0,
+              top: -20,
+              zIndex: 10,
             },
           }}
         >
-          <MenuOption onSelect={() => openConfirmationAlert()} text="Guardar registros" />
+          <MenuOption onSelect={async () => await openConfirmationAlert(0)} text="Guardar registros" />
+          <MenuOption onSelect={async () => await openConfirmationAlert(1)} text='Generar PDF' />
+          <MenuOption onSelect={() => navigation.navigate('records')} text='Ver registros'/>
         </MenuOptions>
       </Menu>
     </MenuProvider>
@@ -106,6 +108,9 @@ function AppStack() {
         headerTintColor: '#fff',
         headerTitleStyle: {
           fontWeight: 'bold',
+        },
+        headerRightContainerStyle: {
+          backgroundColor: '#2d2d2d',
         }
       }}
       initialRouteName='items'
@@ -116,9 +121,7 @@ function AppStack() {
         options={{
           headerTitle: (props) => <LogoTitle {...props} />,
           headerRight: () => (
-            <View>
               <SimpleMenu />
-            </View>
           ),
         }}
       />
@@ -127,6 +130,7 @@ function AppStack() {
       <Stack.Screen name='addAsadera' component={AddAsadera} options={({route}) => ({title: 'Nueva Asadera'})} />
       <Stack.Screen name='asaderaDetails' component={AsaderaDetails} options={{title: 'Asadera'}} />
       <Stack.Screen name='delivered' component={Delivered} options={{title: 'Cliente (entregado)'}} />
+      <Stack.Screen name='records' component={Records} options={{title: 'Tabla de registros'}} />
 
     </Stack.Navigator>
   )
@@ -145,7 +149,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+    width: 150
   },
   title: {
     color: '#fff',

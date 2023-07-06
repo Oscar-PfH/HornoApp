@@ -72,7 +72,7 @@ const Items = ({navigation}) => {
     );
 
     return (
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1 , zIndex: -5}}>
         <Filter />
         <GestureRecognizer
           onSwipe={(direction, state) => onSwipe(direction, state)}

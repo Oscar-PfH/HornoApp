@@ -51,5 +51,5 @@ de Expo y obtener su EAS ID.
 - Pantalla principal
 Puede visualizar una lista de items guardados actualmente
 
-![pantalla principal]([http://url/to/img.png](https://github.com/Oscar-PfH/HornoApp/ovenb4a/images/main1.PNG)
+![pantalla principal](http://url/to/img.png](https://github.com/Oscar-PfH/HornoApp/blob/ovenb4a/images/main1.PNG)
 

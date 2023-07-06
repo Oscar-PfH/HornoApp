@@ -26,7 +26,8 @@ Instalar los siguientes paquetes:
   npm install expo-cli -g
   ```
 
-Necesitará una cuenta en Back4app y crear una nueva base de datos y obtener su ID, la clave JS y el enlace de conexión a la base de datos.
+Necesitará una cuenta en Back4app, crear una nueva base de datos y obtener su ID, la clave JS y el enlace de conexión a la base de datos. Además, tener una cuenta
+de Expo y obtener su EAS ID.
 
 ### Instalación
 
@@ -50,5 +51,5 @@ Necesitará una cuenta en Back4app y crear una nueva base de datos y obtener su 
 - Pantalla principal
 Puede visualizar una lista de items guardados actualmente
 
-
+![pantalla principal]([http://url/to/img.png](https://github.com/Oscar-PfH/HornoApp/ovenb4a/images/main1.PNG)
 

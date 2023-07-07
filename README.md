@@ -49,7 +49,40 @@ de Expo y obtener su EAS ID.
 
 ### Uso
 - Pantalla principal
+
 Puede visualizar una lista de items guardados actualmente
+<p align="center">
+  <img src="https://github.com/Oscar-PfH/HornoApp/blob/ovenb4a/images/main1.PNG" alt="pantalla principal" style="width:200px;"/>
+</p>
 
-![pantalla principal](http://url/to/img.png](https://github.com/Oscar-PfH/HornoApp/blob/ovenb4a/images/main1.PNG)
+- Formulario para agregar un cliente
 
+<p align="center">
+  <img src="https://github.com/Oscar-PfH/HornoApp/blob/ovenb4a/images/new.PNG" alt="pantalla principal" style="width:200px;"/>
+</p>
+
+- Formulario para agregar una asadera
+
+<p align="center">
+  <img src="https://github.com/Oscar-PfH/HornoApp/blob/ovenb4a/images/new2.PNG" alt="pantalla principal" style="width:200px;"/>
+</p>
+
+- Detalles y edición de clientes
+
+<p align="center">
+  <img src="https://github.com/Oscar-PfH/HornoApp/blob/ovenb4a/images/edit1.PNG" alt="pantalla principal" style="width:200px;"/>
+</p>
+
+- Detalles y edición de asaderas
+
+<p align="center">
+  <img src="https://github.com/Oscar-PfH/HornoApp/blob/ovenb4a/images/edit2.PNG" alt="pantalla principal" style="width:200px;"/>
+</p>
+
+- Tabla de registros
+
+Puede visualizar una lista del total de datos obtenidos en un día de trabajo
+
+<p align="center">
+  <img src="https://github.com/Oscar-PfH/HornoApp/blob/ovenb4a/images/table.PNG" alt="pantalla principal" style="width:200px;"/>
+</p>

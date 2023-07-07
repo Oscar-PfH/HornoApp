@@ -2,7 +2,7 @@
 
 HornoApp es una aplicación para la administración y control de asaderas en una panadería.
 
-## Built with
+## Desarrollo
 
 Lista de librerías/frameworks utilizados para el desarrollo de esta aplicación.
 
@@ -14,7 +14,7 @@ Lista de librerías/frameworks utilizados para el desarrollo de esta aplicación
 
 Para generar una copia local de la aplicación debe seguir los siguientes pasos.
 
-### Prerequisites
+### Prerrequisitos
 
 Instalar los siguientes paquetes:
 * npm
@@ -39,7 +39,7 @@ de Expo y obtener su EAS ID.
   ```sh
   npm install
   ```
-3. Configurar un archivo .env
+3. Configurar un archivo .env con los datos de Back4app y Expo.
   ```js
   APP_ID=yourAppId
   JS_KEY=yourJSKey
